@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.Optional;
 import jakarta.inject.Inject;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.rules.CleanCodeAttribute;
 import org.sonar.core.rule.RuleType;
@@ -229,16 +230,16 @@ public class IssueLifecycle {
     workflow.doAutomaticTransition(issue, changeContext);
   }
 
-  public void doManualTransition(DefaultIssue issue, String transitionKey, String userUuid) {
+  public void doManualTransition(DefaultIssue issue, String transitionKey, @Nullable String userUuid) {
     workflow.doManualTransition(issue, transitionKey, getIssueChangeContextWithUser(userUuid));
   }
 
-  public void addComment(DefaultIssue issue, String comment, String userUuid) {
+  public void addComment(DefaultIssue issue, String comment, @Nullable String userUuid) {
     updater.addComment(issue, comment, getIssueChangeContextWithUser(userUuid));
   }
 
   @NotNull
-  private IssueChangeContext getIssueChangeContextWithUser(String userUuid) {
+  private IssueChangeContext getIssueChangeContextWithUser(@Nullable String userUuid) {
     return IssueChangeContext.newBuilder()
       .setDate(changeContext.date())
       .setWebhookSource(changeContext.getWebhookSource())

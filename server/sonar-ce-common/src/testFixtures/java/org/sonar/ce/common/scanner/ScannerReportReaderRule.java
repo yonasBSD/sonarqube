@@ -66,6 +66,7 @@ public class ScannerReportReaderRule implements TestRule, ScannerReportReader, A
   private List<ScannerReport.TelemetryEntry> telemetryEntries = new ArrayList<>();
   private File dependencyFilesArchive;
   private List<ScannerReport.AnalysisData> analysisData = new ArrayList<>();
+  private Map<Integer, List<ScannerReport.IssueResolution>> issueResolutionData = new HashMap<>();
 
   @Override
   public Statement apply(final Statement statement, Description description) {
@@ -323,6 +324,16 @@ public class ScannerReportReaderRule implements TestRule, ScannerReportReader, A
 
   public ScannerReportReaderRule putFileSourceLines(int fileRef, List<String> lines) {
     this.fileSources.put(fileRef, lines);
+    return this;
+  }
+
+  @Override
+  public CloseableIterator<ScannerReport.IssueResolution> readIssueResolution(int componentRef) {
+    return closeableIterator(issueResolutionData.get(componentRef));
+  }
+
+  public ScannerReportReaderRule putIssueResolution(int componentRef, List<ScannerReport.IssueResolution> data) {
+    this.issueResolutionData.put(componentRef, data);
     return this;
   }
 

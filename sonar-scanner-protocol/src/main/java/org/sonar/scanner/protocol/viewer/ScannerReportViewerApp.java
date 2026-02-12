@@ -111,6 +111,8 @@ public class ScannerReportViewerApp {
   private JEditorPane significantCodeEditor;
   private JScrollPane metadataTab;
   private JEditorPane metadataEditor;
+  private JScrollPane issueResolutionTab;
+  private JEditorPane issueResolutionEditor;
 
   /**
    * Create the application.
@@ -258,6 +260,7 @@ public class ScannerReportViewerApp {
     updateDuplications(component);
     updateIssues(component);
     updateExternalIssues(component);
+    updateIssueResolution(component);
     updateMeasures(component);
     updateScm(component);
     updateCpdTextBlocks(component);
@@ -331,6 +334,19 @@ public class ScannerReportViewerApp {
       }
     } catch (Exception e) {
       throw new IllegalStateException("Can't read external issues for " + getNodeName(component), e);
+    }
+  }
+
+  private void updateIssueResolution(Component component) {
+    issueResolutionEditor.setText("");
+    try (CloseableIterator<ScannerReport.IssueResolution> it = reader.readIssueResolution(component.getRef())) {
+      while (it.hasNext()) {
+        ScannerReport.IssueResolution data = it.next();
+        int offset = issueResolutionEditor.getDocument().getLength();
+        issueResolutionEditor.getDocument().insertString(offset, data.toString(), null);
+      }
+    } catch (Exception e) {
+      throw new IllegalStateException("Can't read issue resolution data for " + getNodeName(component), e);
     }
   }
 
@@ -566,6 +582,12 @@ public class ScannerReportViewerApp {
 
     externalIssuesEditor = new JEditorPane();
     externalIssuesTab.setViewportView(externalIssuesEditor);
+
+    issueResolutionTab = new JScrollPane();
+    tabbedPane.addTab("Issue Resolution", null, issueResolutionTab, null);
+
+    issueResolutionEditor = new JEditorPane();
+    issueResolutionTab.setViewportView(issueResolutionEditor);
 
     measuresTab = new JScrollPane();
     tabbedPane.addTab("Measures", null, measuresTab, null);

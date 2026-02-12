@@ -777,6 +777,17 @@ class IssueFieldsSetterTest {
   }
 
   @Test
+  void setInternalTags_preservesIssueResolutionTagFromCurrentTags() {
+    Set<String> currentInternalTags = new HashSet<>(List.of(IssueFieldsSetter.ISSUE_RESOLUTION_TAG, "other-tag"));
+    Set<String> newInternalTags = new HashSet<>(List.of("scanner-tag"));
+
+    issue.setInternalTags(newInternalTags);
+    boolean updated = underTest.setInternalTags(issue, currentInternalTags, context);
+    assertThat(updated).isTrue();
+    assertThat(issue.internalTags()).contains(IssueFieldsSetter.ISSUE_RESOLUTION_TAG, "scanner-tag");
+  }
+
+  @Test
   void set_message() {
     boolean updated = underTest.setMessage(issue, "the message", context);
     assertThat(updated).isTrue();

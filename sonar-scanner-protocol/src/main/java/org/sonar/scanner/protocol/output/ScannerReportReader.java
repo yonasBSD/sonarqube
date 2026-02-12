@@ -242,6 +242,14 @@ public class ScannerReportReader {
     return Protobuf.readStream(file, ScannerReport.TelemetryEntry.parser());
   }
 
+  public CloseableIterator<ScannerReport.IssueResolution> readIssueResolution(int componentRef) {
+    File file = fileStructure.fileFor(FileStructure.Domain.ISSUE_RESOLUTION, componentRef);
+    if (!fileExists(file)) {
+      return emptyCloseableIterator();
+    }
+    return Protobuf.readStream(file, ScannerReport.IssueResolution.parser());
+  }
+
   public CloseableIterator<ScannerReport.AnalysisData> readAnalysisData() {
     File file = fileStructure.analysisData();
     if (!fileExists(file)) {

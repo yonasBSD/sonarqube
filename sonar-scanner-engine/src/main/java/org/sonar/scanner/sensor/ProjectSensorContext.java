@@ -43,8 +43,10 @@ import org.sonar.api.batch.sensor.highlighting.NewHighlighting;
 import org.sonar.api.batch.sensor.highlighting.internal.DefaultHighlighting;
 import org.sonar.api.batch.sensor.issue.NewExternalIssue;
 import org.sonar.api.batch.sensor.issue.NewIssue;
+import org.sonar.api.batch.sensor.issue.NewIssueResolution;
 import org.sonar.api.batch.sensor.issue.internal.DefaultExternalIssue;
 import org.sonar.api.batch.sensor.issue.internal.DefaultIssue;
+import org.sonar.api.batch.sensor.issue.internal.DefaultIssueResolution;
 import org.sonar.api.batch.sensor.measure.NewMeasure;
 import org.sonar.api.batch.sensor.measure.internal.DefaultMeasure;
 import org.sonar.api.batch.sensor.rule.NewAdHocRule;
@@ -256,6 +258,11 @@ public class ProjectSensorContext implements SensorContext {
   public boolean isFeatureAvailable(String featureName) {
     //Very simple way of returning if a feature is available or not, based on the feature flags returned by the Web API.
     return featureFlagsRepository.isEnabled(featureName);
+  }
+
+  @Override
+  public NewIssueResolution newIssueResolution() {
+    return new DefaultIssueResolution(sensorStorage);
   }
 
   @Override

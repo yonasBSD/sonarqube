@@ -19,15 +19,22 @@
  */
 package org.sonar.api.batch.sensor.internal;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.data.MapEntry.entry;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Set;
 import org.junit.Test;
+import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
+import org.sonar.api.batch.sensor.issue.internal.DefaultIssueResolution;
+import org.sonar.api.rule.RuleKey;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.data.MapEntry.entry;
 
 public class InMemorySensorStorageTest {
 
@@ -93,6 +100,47 @@ public class InMemorySensorStorageTest {
       .isInstanceOf(IllegalStateException.class)
       .hasMessageContaining("Failed to read data from InputStream");
   }
-  
-  
+
+  @Test
+  public void test_storeIssueResolution() {
+    assertThat(underTest.issueResolutionsByComponent).isEmpty();
+
+    InputFile inputFile = new TestInputFileBuilder("foo", "src/Foo.java")
+      .setContents("class Foo {}")
+      .build();
+    DefaultIssueResolution resolution = new DefaultIssueResolution(underTest);
+    resolution
+      .forRules(Set.of(RuleKey.of("java", "S123")))
+      .on(inputFile)
+      .at(inputFile.selectLine(1))
+      .comment("comment")
+      .status(IssueResolution.Status.DEFAULT)
+      .save();
+
+    assertThat(underTest.issueResolutionsByComponent).containsKey("foo:src/Foo.java");
+    List<IssueResolution> stored = underTest.issueResolutionsByComponent.get("foo:src/Foo.java");
+    assertThat(stored).hasSize(1);
+    assertThat(stored.get(0).ruleKeys()).containsExactly(RuleKey.of("java", "S123"));
+    assertThat(stored.get(0).inputFile()).isEqualTo(inputFile);
+    assertThat(stored.get(0).comment()).isEqualTo("comment");
+    assertThat(stored.get(0).status()).isEqualTo(IssueResolution.Status.DEFAULT);
+  }
+
+  @Test
+  public void test_storeIssueResolution_defaultsStatusWhenNotProvided() {
+    InputFile inputFile = new TestInputFileBuilder("foo", "src/Foo.java")
+      .setContents("class Foo {}")
+      .build();
+    DefaultIssueResolution resolution = new DefaultIssueResolution(underTest);
+    resolution
+      .forRules(Set.of(RuleKey.of("java", "S123")))
+      .on(inputFile)
+      .at(inputFile.selectLine(1))
+      .comment("comment")
+      .save();
+
+    List<IssueResolution> stored = underTest.issueResolutionsByComponent.get("foo:src/Foo.java");
+    assertThat(stored).hasSize(1);
+    assertThat(stored.get(0).status()).isEqualTo(IssueResolution.Status.DEFAULT);
+  }
 }

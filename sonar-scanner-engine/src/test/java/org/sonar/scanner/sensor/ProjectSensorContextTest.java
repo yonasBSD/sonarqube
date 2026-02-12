@@ -25,11 +25,16 @@ import org.sonar.api.SonarEdition;
 import org.sonar.api.SonarQubeSide;
 import org.sonar.api.SonarRuntime;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.fs.internal.DefaultInputProject;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
+import org.sonar.api.batch.sensor.issue.internal.DefaultIssueResolution;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.internal.SonarRuntimeImpl;
+import org.sonar.api.rule.RuleKey;
 import org.sonar.api.utils.Version;
 import org.sonar.core.platform.PluginInfo;
 import org.sonar.scanner.bootstrap.ScannerPluginRepository;
@@ -109,5 +114,22 @@ class ProjectSensorContextTest {
   @Test
   void settings_throwsUnsupportedOperationException() {
     assertThatThrownBy(() -> underTest.settings()).isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  void newIssueResolution_delegatesToSensorStorage() {
+    DefaultInputFile inputFile = new TestInputFileBuilder("project", "src/Foo.java")
+      .setContents("class Foo {}")
+      .build();
+
+    DefaultIssueResolution resolution = (DefaultIssueResolution) underTest.newIssueResolution();
+    resolution.forRules(java.util.Set.of(RuleKey.of("java", "S123")))
+      .on(inputFile)
+      .at(inputFile.selectLine(1))
+      .comment("comment")
+      .status(IssueResolution.Status.DEFAULT);
+    resolution.save();
+
+    verify(sensorStorage).store(resolution);
   }
 }

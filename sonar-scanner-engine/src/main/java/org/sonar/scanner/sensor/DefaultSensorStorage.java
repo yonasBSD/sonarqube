@@ -19,13 +19,6 @@
  */
 package org.sonar.scanner.sensor;
 
-import static java.lang.Math.max;
-import static org.sonar.api.measures.CoreMetrics.COMMENT_LINES_DATA_KEY;
-import static org.sonar.api.measures.CoreMetrics.LINES_KEY;
-import static org.sonar.api.measures.CoreMetrics.PUBLIC_DOCUMENTED_API_DENSITY_KEY;
-import static org.sonar.api.measures.CoreMetrics.TEST_SUCCESS_DENSITY_KEY;
-import static org.sonar.api.utils.Preconditions.checkArgument;
-
 import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,6 +55,7 @@ import org.sonar.api.batch.sensor.highlighting.internal.DefaultHighlighting;
 import org.sonar.api.batch.sensor.internal.SensorStorage;
 import org.sonar.api.batch.sensor.issue.ExternalIssue;
 import org.sonar.api.batch.sensor.issue.Issue;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
 import org.sonar.api.batch.sensor.measure.Measure;
 import org.sonar.api.batch.sensor.measure.internal.DefaultMeasure;
 import org.sonar.api.batch.sensor.rule.AdHocRule;
@@ -81,6 +75,7 @@ import org.sonar.duplications.internal.pmd.PmdBlockChunker;
 import org.sonar.scanner.cpd.index.SonarCpdBlockIndex;
 import org.sonar.scanner.issue.ImpactMapper;
 import org.sonar.scanner.issue.IssuePublisher;
+import org.sonar.scanner.issue.IssueResolutionCache;
 import org.sonar.scanner.protocol.Constants;
 import org.sonar.scanner.protocol.output.FileStructure;
 import org.sonar.scanner.protocol.output.ScannerReport;
@@ -90,6 +85,13 @@ import org.sonar.scanner.report.ScannerReportUtils;
 import org.sonar.scanner.repository.ContextPropertiesCache;
 import org.sonar.scanner.repository.TelemetryCache;
 import org.sonar.scanner.scan.branch.BranchConfiguration;
+
+import static java.lang.Math.max;
+import static org.sonar.api.measures.CoreMetrics.COMMENT_LINES_DATA_KEY;
+import static org.sonar.api.measures.CoreMetrics.LINES_KEY;
+import static org.sonar.api.measures.CoreMetrics.PUBLIC_DOCUMENTED_API_DENSITY_KEY;
+import static org.sonar.api.measures.CoreMetrics.TEST_SUCCESS_DENSITY_KEY;
+import static org.sonar.api.utils.Preconditions.checkArgument;
 
 public class DefaultSensorStorage implements SensorStorage {
 
@@ -123,6 +125,7 @@ public class DefaultSensorStorage implements SensorStorage {
   private final SonarCpdBlockIndex index;
   private final ContextPropertiesCache contextPropertiesCache;
   private final TelemetryCache telemetryCache;
+  private final IssueResolutionCache issueResolutionCache;
   private final Configuration settings;
   private final ScannerMetrics scannerMetrics;
   private final BranchConfiguration branchConfiguration;
@@ -130,7 +133,8 @@ public class DefaultSensorStorage implements SensorStorage {
   private final Set<String> alreadyAddedData = new HashSet<>();
 
   public DefaultSensorStorage(MetricFinder metricFinder, IssuePublisher moduleIssues, Configuration settings, ReportPublisher reportPublisher, SonarCpdBlockIndex index,
-    ContextPropertiesCache contextPropertiesCache, TelemetryCache telemetryCache, ScannerMetrics scannerMetrics, BranchConfiguration branchConfiguration) {
+    ContextPropertiesCache contextPropertiesCache, TelemetryCache telemetryCache, IssueResolutionCache issueResolutionCache, ScannerMetrics scannerMetrics,
+    BranchConfiguration branchConfiguration) {
     this.metricFinder = metricFinder;
     this.moduleIssues = moduleIssues;
     this.settings = settings;
@@ -138,6 +142,7 @@ public class DefaultSensorStorage implements SensorStorage {
     this.index = index;
     this.contextPropertiesCache = contextPropertiesCache;
     this.telemetryCache = telemetryCache;
+    this.issueResolutionCache = issueResolutionCache;
     this.scannerMetrics = scannerMetrics;
     this.branchConfiguration = branchConfiguration;
   }
@@ -451,6 +456,11 @@ public class DefaultSensorStorage implements SensorStorage {
 
   public void storeTelemetry(String key, String value) {
     telemetryCache.put(key, value);
+  }
+
+  @Override
+  public void store(IssueResolution issueResolution) {
+    issueResolutionCache.add(issueResolution);
   }
 
   @Override

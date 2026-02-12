@@ -21,6 +21,9 @@ package org.sonar.api.batch.sensor.internal;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,6 +42,7 @@ import org.sonar.api.batch.sensor.cache.WriteCache;
 import org.sonar.api.batch.sensor.error.AnalysisError;
 import org.sonar.api.batch.sensor.error.NewAnalysisError;
 import org.sonar.api.batch.sensor.highlighting.TypeOfText;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
 import org.sonar.api.batch.sensor.issue.NewExternalIssue;
 import org.sonar.api.batch.sensor.issue.NewIssue;
 import org.sonar.api.batch.sensor.symbol.NewSymbolTable;
@@ -398,6 +402,32 @@ public class SensorContextTesterTest {
     assertThat(tester.isFeatureAvailable("feature3")).isTrue();
     assertThat(tester.isFeatureAvailable("feature4")).isTrue();
     assertThat(tester.isFeatureAvailable("feature5")).isFalse();
+  }
+
+  @Test
+  public void testIssueResolutions() {
+    assertThat(tester.getIssueResolutions()).isEmpty();
+
+    InputFile inputFile = new TestInputFileBuilder("foo", "src/Foo.java")
+      .setContents("class Foo {}")
+      .build();
+    tester.newIssueResolution()
+      .forRules(Set.of(RuleKey.of("java", "S123")))
+      .on(inputFile)
+      .at(inputFile.selectLine(1))
+      .comment("comment")
+      .status(IssueResolution.Status.DEFAULT)
+      .save();
+
+    Map<String, List<IssueResolution>> resolutionsMap = tester.getIssueResolutions();
+    assertThat(resolutionsMap).containsKey("foo:src/Foo.java");
+    List<IssueResolution> resolutions = resolutionsMap.get("foo:src/Foo.java");
+    assertThat(resolutions).hasSize(1);
+    IssueResolution resolution = resolutions.get(0);
+    assertThat(resolution.ruleKeys()).containsExactly(RuleKey.of("java", "S123"));
+    assertThat(resolution.inputFile()).isEqualTo(inputFile);
+    assertThat(resolution.comment()).isEqualTo("comment");
+    assertThat(resolution.status()).isEqualTo(IssueResolution.Status.DEFAULT);
   }
 
   @Test

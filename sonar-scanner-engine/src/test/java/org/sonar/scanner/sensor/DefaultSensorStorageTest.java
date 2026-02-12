@@ -41,9 +41,11 @@ import org.sonar.api.batch.sensor.highlighting.TypeOfText;
 import org.sonar.api.batch.sensor.highlighting.internal.DefaultHighlighting;
 import org.sonar.api.batch.sensor.issue.ExternalIssue;
 import org.sonar.api.batch.sensor.issue.Issue;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
 import org.sonar.api.batch.sensor.issue.internal.DefaultExternalIssue;
 import org.sonar.api.batch.sensor.issue.internal.DefaultIssue;
 import org.sonar.api.batch.sensor.issue.internal.DefaultIssueLocation;
+import org.sonar.api.batch.sensor.issue.internal.DefaultIssueResolution;
 import org.sonar.api.batch.sensor.measure.internal.DefaultMeasure;
 import org.sonar.api.batch.sensor.rule.internal.DefaultAdHocRule;
 import org.sonar.api.batch.sensor.symbol.internal.DefaultSymbolTable;
@@ -51,12 +53,14 @@ import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.measures.CoreMetrics;
+import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.CleanCodeAttribute;
 import org.sonar.api.rules.RuleType;
 import org.sonar.core.metric.ScannerMetrics;
 import org.sonar.core.util.CloseableIterator;
 import org.sonar.scanner.cpd.index.SonarCpdBlockIndex;
 import org.sonar.scanner.issue.IssuePublisher;
+import org.sonar.scanner.issue.IssueResolutionCache;
 import org.sonar.scanner.protocol.Constants;
 import org.sonar.scanner.protocol.output.FileStructure;
 import org.sonar.scanner.protocol.output.ScannerReport;
@@ -88,6 +92,7 @@ class DefaultSensorStorageTest {
   private ScannerReportWriter reportWriter;
   private ContextPropertiesCache contextPropertiesCache = new ContextPropertiesCache();
   private TelemetryCache telemetryCache = new TelemetryCache();
+  private IssueResolutionCache issueResolutionCache = new IssueResolutionCache();
   private BranchConfiguration branchConfiguration;
   private DefaultInputProject project;
   private ScannerReportReader reportReader;
@@ -112,8 +117,8 @@ class DefaultSensorStorageTest {
     branchConfiguration = mock(BranchConfiguration.class);
 
     underTest = new DefaultSensorStorage(
-      metricFinder, moduleIssues, settings.asConfig(), reportPublisher, mock(SonarCpdBlockIndex.class), contextPropertiesCache, telemetryCache, new ScannerMetrics(),
-      branchConfiguration);
+      metricFinder, moduleIssues, settings.asConfig(), reportPublisher, mock(SonarCpdBlockIndex.class), contextPropertiesCache, telemetryCache,
+      issueResolutionCache, new ScannerMetrics(), branchConfiguration);
 
     project = new DefaultInputProject(ProjectDefinition.create()
       .setKey("foo")
@@ -397,6 +402,20 @@ class DefaultSensorStorageTest {
       assertThat(adhocRule.getCleanCodeAttribute())
         .isEqualTo(CleanCodeAttribute.CLEAR.name());
     }
+  }
+
+  @Test
+  void shouldStoreIssueResolution() {
+    DefaultInputFile file = new TestInputFileBuilder("foo", "src/Foo.java").build();
+    DefaultIssueResolution resolution = new DefaultIssueResolution(null);
+    resolution.forRules(java.util.Set.of(RuleKey.of("java", "S123")))
+      .on(file)
+      .comment("comment")
+      .status(IssueResolution.Status.DEFAULT);
+
+    underTest.store(resolution);
+
+    assertThat(issueResolutionCache.getAll()).containsExactly(resolution);
   }
 
   @Test

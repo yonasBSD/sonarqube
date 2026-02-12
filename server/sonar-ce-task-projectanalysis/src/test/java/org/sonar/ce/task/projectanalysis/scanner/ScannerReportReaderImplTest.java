@@ -19,10 +19,10 @@
  */
 package org.sonar.ce.task.projectanalysis.scanner;
 
-import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -33,7 +33,7 @@ import org.sonar.scanner.protocol.output.FileStructure;
 import org.sonar.scanner.protocol.output.ScannerReport;
 import org.sonar.scanner.protocol.output.ScannerReportWriter;
 
-import static com.google.common.collect.ImmutableList.of;
+import static java.util.List.of;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -294,11 +294,31 @@ public class ScannerReportReaderImplTest {
   public void verify_readAnalysisWarnings() {
     ScannerReport.AnalysisWarning warning1 = ScannerReport.AnalysisWarning.newBuilder().setText("warning 1").build();
     ScannerReport.AnalysisWarning warning2 = ScannerReport.AnalysisWarning.newBuilder().setText("warning 2").build();
-    ImmutableList<ScannerReport.AnalysisWarning> warnings = of(warning1, warning2);
+    List<ScannerReport.AnalysisWarning> warnings = of(warning1, warning2);
     writer.writeAnalysisWarnings(warnings);
 
     CloseableIterator<ScannerReport.AnalysisWarning> res = underTest.readAnalysisWarnings();
     assertThat(res).toIterable().containsExactlyElementsOf(warnings);
+    res.close();
+  }
+
+  @Test
+  public void readIssueResolution_returns_empty_iterator_when_file_does_not_exist() {
+    assertThat(underTest.readIssueResolution(COMPONENT_REF)).isExhausted();
+  }
+
+  @Test
+  public void verify_readIssueResolution() {
+    ScannerReport.IssueResolution data = ScannerReport.IssueResolution.newBuilder()
+      .setTextRange(ScannerReport.TextRange.newBuilder().setStartLine(5).setEndLine(5).build())
+      .addRuleKeys("java:S123")
+      .setComment("accepted")
+      .setStatus(ScannerReport.IssueResolutionStatus.DEFAULT)
+      .build();
+    writer.writeIssueResolution(COMPONENT_REF, of(data));
+
+    CloseableIterator<ScannerReport.IssueResolution> res = underTest.readIssueResolution(COMPONENT_REF);
+    assertThat(res).toIterable().containsExactly(data);
     res.close();
   }
 

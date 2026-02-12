@@ -41,6 +41,7 @@ import org.sonar.api.batch.sensor.highlighting.NewHighlighting;
 import org.sonar.api.batch.sensor.highlighting.internal.DefaultHighlighting;
 import org.sonar.api.batch.sensor.issue.ExternalIssue;
 import org.sonar.api.batch.sensor.issue.Issue;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
 import org.sonar.api.batch.sensor.measure.Measure;
 import org.sonar.api.batch.sensor.rule.AdHocRule;
 import org.sonar.api.batch.sensor.symbol.NewSymbolTable;
@@ -63,6 +64,7 @@ class InMemorySensorStorage implements SensorStorage {
   Map<String, String> telemetryEntries = new HashMap<>();
   Map<String, AnalysisData> analysisDataEntries = new HashMap<>();
   Map<String, DefaultSignificantCode> significantCodePerComponent = new HashMap<>();
+  Map<String, List<IssueResolution>> issueResolutionsByComponent = new HashMap<>();
 
   @Override
   public void store(Measure measure) {
@@ -175,6 +177,12 @@ class InMemorySensorStorage implements SensorStorage {
     } catch (IOException e) {
       throw new IllegalStateException("Failed to read data from InputStream", e);
     }
+  }
+
+  @Override
+  public void store(IssueResolution issueResolution) {
+    String fileKey = issueResolution.inputFile().key();
+    issueResolutionsByComponent.computeIfAbsent(fileKey, x -> new ArrayList<>()).add(issueResolution);
   }
 
   record AnalysisData(String key, String mimeType, byte[] data) { }

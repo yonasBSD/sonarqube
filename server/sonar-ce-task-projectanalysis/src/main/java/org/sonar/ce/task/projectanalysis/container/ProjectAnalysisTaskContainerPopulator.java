@@ -99,6 +99,7 @@ import org.sonar.ce.task.projectanalysis.issue.TrackerReferenceBranchInputFactor
 import org.sonar.ce.task.projectanalysis.issue.TrackerSourceBranchInputFactory;
 import org.sonar.ce.task.projectanalysis.issue.TrackerTargetBranchInputFactory;
 import org.sonar.ce.task.projectanalysis.issue.TransitionIssuesToAnticipatedStatesVisitor;
+import org.sonar.ce.task.projectanalysis.issue.IssueResolutionVisitor;
 import org.sonar.ce.task.projectanalysis.issue.UpdateConflictResolver;
 import org.sonar.ce.task.projectanalysis.issue.filter.IssueFilter;
 import org.sonar.ce.task.projectanalysis.issue.fixedissues.PullRequestFixedIssueRepositoryImpl;
@@ -286,6 +287,7 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
       RuleTagsCopier.class,
       IssueCreationDateCalculator.class,
       TransitionIssuesToAnticipatedStatesVisitor.class,
+      IssueResolutionVisitor.class,
       LocationHashesService.class,
       DebtCalculator.class,
       EffortAggregator.class,

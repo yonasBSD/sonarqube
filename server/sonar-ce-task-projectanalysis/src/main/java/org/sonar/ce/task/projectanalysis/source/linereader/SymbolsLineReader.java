@@ -37,6 +37,7 @@ import org.sonar.scanner.protocol.output.ScannerReport;
 import static java.lang.String.format;
 import static org.sonar.ce.task.projectanalysis.source.linereader.RangeOffsetConverter.OFFSET_SEPARATOR;
 import static org.sonar.ce.task.projectanalysis.source.linereader.RangeOffsetConverter.SYMBOLS_SEPARATOR;
+import static org.sonar.ce.task.projectanalysis.util.TextRangeUtils.containsLine;
 
 public class SymbolsLineReader implements LineReader {
 
@@ -98,7 +99,7 @@ public class SymbolsLineReader implements LineReader {
   }
 
   private void appendSymbol(StringBuilder lineSymbol, ScannerReport.TextRange range, int line, int symbolId, String sourceLine) {
-    if (matchLine(range, line)) {
+    if (containsLine(range, line)) {
       String offsets = rangeOffsetConverter.offsetToString(range, line, sourceLine.length());
       if (!offsets.isEmpty()) {
         if (lineSymbol.length() > 0) {
@@ -109,10 +110,6 @@ public class SymbolsLineReader implements LineReader {
           .append(symbolId);
       }
     }
-  }
-
-  private static boolean matchLine(ScannerReport.TextRange range, int line) {
-    return range.getStartLine() <= line && range.getEndLine() >= line;
   }
 
   private static Map<ScannerReport.Symbol, Integer> createIdsBySymbolMap(List<ScannerReport.Symbol> symbols) {

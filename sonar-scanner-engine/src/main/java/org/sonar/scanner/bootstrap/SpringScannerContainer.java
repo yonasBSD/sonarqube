@@ -60,6 +60,7 @@ import org.sonar.scanner.cpd.CpdSettings;
 import org.sonar.scanner.cpd.index.SonarCpdBlockIndex;
 import org.sonar.scanner.issue.IssueFilters;
 import org.sonar.scanner.issue.IssuePublisher;
+import org.sonar.scanner.issue.IssueResolutionCache;
 import org.sonar.scanner.issue.ignore.EnforceIssuesFilter;
 import org.sonar.scanner.issue.ignore.IgnoreIssuesFilter;
 import org.sonar.scanner.issue.ignore.pattern.IssueExclusionPatternInitializer;
@@ -77,6 +78,7 @@ import org.sonar.scanner.report.JavaArchitectureInformationProvider;
 import org.sonar.scanner.report.MetadataPublisher;
 import org.sonar.scanner.report.ReportPublisher;
 import org.sonar.scanner.report.ScannerFileStructureProvider;
+import org.sonar.scanner.report.IssueResolutionPublisher;
 import org.sonar.scanner.report.SourcePublisher;
 import org.sonar.scanner.report.TelemetryPublisher;
 import org.sonar.scanner.report.TestExecutionPublisher;
@@ -228,6 +230,7 @@ public class SpringScannerContainer extends SpringComponentContainer {
       // context
       ContextPropertiesCache.class,
       TelemetryCache.class,
+      IssueResolutionCache.class,
       ScanPropertiesTelemetryProvider.class,
 
       SonarGlobalPropertiesFilter.class,
@@ -257,6 +260,7 @@ public class SpringScannerContainer extends SpringComponentContainer {
       SourcePublisher.class,
       ChangedLinesPublisher.class,
       AnalysisWarningsPublisher.class,
+      IssueResolutionPublisher.class,
 
       CeTaskReportDataHolder.class,
 

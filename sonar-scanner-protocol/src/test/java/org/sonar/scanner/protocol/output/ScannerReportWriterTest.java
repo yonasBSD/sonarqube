@@ -344,6 +344,35 @@ class ScannerReportWriterTest {
   }
 
   @Test
+  void write_issue_resolution_data() {
+    assertThat(underTest.hasComponentData(FileStructure.Domain.ISSUE_RESOLUTION, 1)).isFalse();
+
+    ScannerReport.IssueResolution data = ScannerReport.IssueResolution.newBuilder()
+      .addRuleKeys("java:S123")
+      .setComment("accepted")
+      .setStatus(ScannerReport.IssueResolutionStatus.DEFAULT)
+      .setTextRange(ScannerReport.TextRange.newBuilder()
+        .setStartLine(10)
+        .setEndLine(11)
+        .build())
+      .build();
+    underTest.writeIssueResolution(1, List.of(data));
+
+    assertThat(underTest.hasComponentData(FileStructure.Domain.ISSUE_RESOLUTION, 1)).isTrue();
+    File file = underTest.getFileStructure().fileFor(FileStructure.Domain.ISSUE_RESOLUTION, 1);
+    assertThat(file).exists().isFile();
+    try (CloseableIterator<ScannerReport.IssueResolution> read = Protobuf.readStream(file, ScannerReport.IssueResolution.parser())) {
+      ScannerReport.IssueResolution result = read.next();
+      assertThat(result.getRuleKeysList()).containsExactly("java:S123");
+      assertThat(result.getComment()).isEqualTo("accepted");
+      assertThat(result.getStatus()).isEqualTo(ScannerReport.IssueResolutionStatus.DEFAULT);
+      assertThat(result.getTextRange().getStartLine()).isEqualTo(10);
+      assertThat(result.getTextRange().getEndLine()).isEqualTo(11);
+      assertThat(read.hasNext()).isFalse();
+    }
+  }
+
+  @Test
   void write_telemetry() {
     List<ScannerReport.TelemetryEntry> input = List.of(
       ScannerReport.TelemetryEntry.newBuilder()

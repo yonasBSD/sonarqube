@@ -166,6 +166,12 @@ public class ScannerReportWriter {
     return file;
   }
 
+  public File writeIssueResolution(int componentRef, Iterable<ScannerReport.IssueResolution> data) {
+    File file = fileStructure.fileFor(FileStructure.Domain.ISSUE_RESOLUTION, componentRef);
+    Protobuf.writeStream(data, file, false);
+    return file;
+  }
+
   public File appendAnalysisData(ScannerReport.AnalysisData analysisData) {
     File file = fileStructure.analysisData();
     appendDelimitedTo(file, analysisData, "analysis data for " + analysisData.getKey());

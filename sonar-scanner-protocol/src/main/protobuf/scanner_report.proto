@@ -220,6 +220,18 @@ message Issue {
   repeated string internal_tags = 13;
 }
 
+message IssueResolution {
+  TextRange text_range = 1;
+  IssueResolutionStatus status = 2;
+  repeated string rule_keys = 3;
+  string comment = 4;
+}
+
+enum IssueResolutionStatus {
+  DEFAULT = 0;
+  FALSE_POSITIVE = 1;
+}
+
 message ExternalIssue {
   string engine_id = 1;
   string rule_id = 2;

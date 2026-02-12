@@ -52,6 +52,7 @@ import org.sonar.xoo.rule.MarkAsUnchangedSensor;
 import org.sonar.xoo.rule.MultilineHotspotSensor;
 import org.sonar.xoo.rule.MultilineIssuesSensor;
 import org.sonar.xoo.rule.NoSonarSensor;
+import org.sonar.xoo.rule.IssueResolutionSensor;
 import org.sonar.xoo.rule.OneBlockerIssuePerFileSensor;
 import org.sonar.xoo.rule.OneBugIssuePerLineSensor;
 import org.sonar.xoo.rule.OneBugIssuePerTestLineSensor;
@@ -152,6 +153,7 @@ public class XooPlugin implements Plugin {
       RandomAccessSensor.class,
       SaveDataTwiceSensor.class,
       NoSonarSensor.class,
+      IssueResolutionSensor.class,
       CpdTokenizerSensor.class,
 
       OneBlockerIssuePerFileSensor.class,

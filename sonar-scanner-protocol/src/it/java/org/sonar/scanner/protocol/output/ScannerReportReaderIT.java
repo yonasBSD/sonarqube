@@ -391,6 +391,23 @@ public class ScannerReportReaderIT {
   }
 
   @Test
+  public void read_issue_resolution_data() {
+    ScannerReportWriter writer = new ScannerReportWriter(fileStructure);
+    ScannerReport.IssueResolution data = ScannerReport.IssueResolution.newBuilder()
+      .addRuleKeys("java:S123")
+      .setComment("accepted")
+      .setStatus(ScannerReport.IssueResolutionStatus.DEFAULT)
+      .setTextRange(ScannerReport.TextRange.newBuilder()
+        .setStartLine(10)
+        .build())
+      .build();
+    writer.writeIssueResolution(1, List.of(data));
+
+    assertThat(underTest.readIssueResolution(1)).toIterable().containsExactly(data);
+    assertThat(underTest.readIssueResolution(UNKNOWN_COMPONENT_REF)).isExhausted();
+  }
+
+  @Test
   public void readDependencyFilesArchive_withNoFile_returnsNull() {
     assertThat(underTest.readDependencyFilesArchive()).isNull();
   }

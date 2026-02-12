@@ -245,4 +245,10 @@ public class ScannerReportReaderImpl implements ScannerReportReader {
     ensureInitialized();
     return delegate.readAnalysisData();
   }
+
+  @Override
+  public CloseableIterator<ScannerReport.IssueResolution> readIssueResolution(int componentRef) {
+    ensureInitialized();
+    return delegate.readIssueResolution(componentRef);
+  }
 }

@@ -89,6 +89,7 @@ public class IssueFieldsSetter {
   public static final String TAGS = "tags";
   public static final String CODE_VARIANTS = "code_variants";
   public static final String IMPACT_SEVERITY = "impactSeverity";
+  public static final String ISSUE_RESOLUTION_TAG = "issue-resolution";
 
   private static final Joiner CHANGELOG_LIST_JOINER = Joiner.on(" ").skipNulls();
 
@@ -520,15 +521,24 @@ public class IssueFieldsSetter {
     Set<String> newInternalTags = issue.internalTags().stream()
       .map(String::trim)
       .filter(s -> !s.isEmpty())
-      .collect(Collectors.toSet());
+      .collect(Collectors.toCollection(HashSet::new));
 
+    boolean changed = false;
     if (!currentInternalTags.equals(newInternalTags)) {
       issue.setInternalTags(newInternalTags);
       issue.setUpdateDate(context.date());
       issue.setChanged(true);
-      return true;
+      changed = true;
     }
-    return false;
+
+    // Preserve CE-managed internal tags from the base issue
+    if (currentInternalTags.contains(ISSUE_RESOLUTION_TAG) && !issue.internalTags().contains(ISSUE_RESOLUTION_TAG)) {
+      Set<String> tags = new HashSet<>(issue.internalTags());
+      tags.add(ISSUE_RESOLUTION_TAG);
+      issue.setInternalTags(tags);
+    }
+
+    return changed;
   }
 
   public boolean setCodeVariants(DefaultIssue issue, Set<String> currentCodeVariants, IssueChangeContext context) {

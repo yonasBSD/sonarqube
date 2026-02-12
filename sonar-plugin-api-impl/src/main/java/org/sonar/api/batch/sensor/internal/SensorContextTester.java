@@ -66,10 +66,13 @@ import org.sonar.api.batch.sensor.highlighting.internal.DefaultHighlighting;
 import org.sonar.api.batch.sensor.highlighting.internal.SyntaxHighlightingRule;
 import org.sonar.api.batch.sensor.issue.ExternalIssue;
 import org.sonar.api.batch.sensor.issue.Issue;
+import org.sonar.api.batch.sensor.issue.IssueResolution;
 import org.sonar.api.batch.sensor.issue.NewExternalIssue;
 import org.sonar.api.batch.sensor.issue.NewIssue;
+import org.sonar.api.batch.sensor.issue.NewIssueResolution;
 import org.sonar.api.batch.sensor.issue.internal.DefaultExternalIssue;
 import org.sonar.api.batch.sensor.issue.internal.DefaultIssue;
+import org.sonar.api.batch.sensor.issue.internal.DefaultIssueResolution;
 import org.sonar.api.batch.sensor.measure.Measure;
 import org.sonar.api.batch.sensor.measure.NewMeasure;
 import org.sonar.api.batch.sensor.measure.internal.DefaultMeasure;
@@ -457,6 +460,15 @@ public class SensorContextTester implements SensorContext {
   public void addAnalysisData(String key, String mimeType, InputStream data) {
     //No Need to check the source of the plugin in the tester
     sensorStorage.storeAnalysisData(key,mimeType, data);
+  }
+
+  @Override
+  public NewIssueResolution newIssueResolution() {
+    return new DefaultIssueResolution(sensorStorage);
+  }
+
+  public Map<String, List<IssueResolution>> getIssueResolutions() {
+    return unmodifiableMap(sensorStorage.issueResolutionsByComponent);
   }
 
   @Override
