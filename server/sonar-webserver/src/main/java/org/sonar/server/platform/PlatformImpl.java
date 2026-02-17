@@ -42,9 +42,11 @@ import org.sonar.server.platform.platformlevel.PlatformLevel4;
 import org.sonar.server.platform.platformlevel.PlatformLevelSafeMode;
 import org.sonar.server.platform.platformlevel.PlatformLevelStartup;
 import org.sonar.server.platform.web.ApiV2Servlet;
+import org.sonar.server.platform.web.ConditionalSpringSecurityFilter;
 
 import static jakarta.servlet.DispatcherType.ASYNC;
 import static jakarta.servlet.DispatcherType.ERROR;
+import static jakarta.servlet.DispatcherType.FORWARD;
 import static jakarta.servlet.DispatcherType.REQUEST;
 import static org.sonar.process.ProcessId.WEB_SERVER;
 import static org.springframework.web.filter.UrlHandlerFilter.trailingSlashHandler;
@@ -140,7 +142,21 @@ public class PlatformImpl implements Platform {
     ServletRegistration.Dynamic app = this.servletContext.addServlet("app", servlet);
     app.addMapping("/api/v2/*");
     app.setLoadOnStartup(1);
+    registerSpringSecurityFilter();
     registerTrailingSlashFilter();
+  }
+
+  private void registerSpringSecurityFilter() {
+    var springSecurityFilter = new ConditionalSpringSecurityFilter(
+      "springSecurityFilterChain",
+      "org.springframework.web.servlet.FrameworkServlet.CONTEXT.app"
+    );
+    var filterRegistration = this.servletContext.addFilter("springSecurityFilterChain", springSecurityFilter);
+    filterRegistration.addMappingForServletNames(
+      java.util.EnumSet.of(REQUEST, ERROR, ASYNC, FORWARD),
+      false,
+      "app"
+    );
   }
 
   private void registerTrailingSlashFilter() {

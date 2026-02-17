@@ -48,6 +48,7 @@ import org.sonar.server.v2.api.system.controller.HealthController;
 import org.sonar.server.v2.api.user.controller.DefaultUserController;
 import org.sonar.server.v2.api.user.converter.UsersSearchRestResponseGenerator;
 import org.sonar.server.v2.common.DeprecatedHandler;
+import org.sonar.server.v2.security.WebSecurityConfig;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -59,6 +60,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
   ActiveRulesHandlerImpl.class,
   ActiveRuleService.class,
   ServerWebConfig.class,
+  WebSecurityConfig.class,
   DatabaseMigrationsController.class,
   DefaultActiveRulesController.class,
   DefaultBoundProjectsController.class,
@@ -76,6 +78,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
   DefaultScannerEngineController.class,
   DefaultUserController.class,
   DefaultVersionController.class,
+
   HealthController.class,
   JresHandlerImpl.class,
   ScannerEngineHandlerImpl.class,
