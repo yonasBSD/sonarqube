@@ -40,10 +40,9 @@ dependencies {
   testRuntimeOnly 'org.postgresql:postgresql'
 
   testFixturesApi 'org.junit.jupiter:junit-jupiter-api'
-  testFixturesApi testFixtures(project(':server:sonar-db-commons'))
+  testFixturesApi 'org.sonarsource.sonarqube:sonar-db-commons-testfixtures'
   testFixturesApi testFixtures(project(':server:sonar-db-migration'))
 
-  testFixturesImplementation 'com.h2database:h2'
   testFixturesImplementation project(':sonar-plugin-api-impl')
 
   testFixturesCompileOnly 'com.github.spotbugs:spotbugs-annotations'

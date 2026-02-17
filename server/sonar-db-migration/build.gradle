@@ -35,11 +35,11 @@ dependencies {
   testImplementation 'org.sonarsource.api.plugin:sonar-plugin-api-test-fixtures'
   testImplementation project(':sonar-scanner-protocol')
   testImplementation project(':sonar-testing-harness')
-  testImplementation testFixtures(project(':server:sonar-db-commons'))
+  testImplementation 'org.sonarsource.sonarqube:sonar-db-commons-testfixtures'
 
   testFixturesImplementation 'org.sonarsource.orchestrator:sonar-orchestrator-junit4'
   testFixturesImplementation 'org.junit.jupiter:junit-jupiter-api'
-  testFixturesImplementation testFixtures(project(':server:sonar-db-commons'))
+  testFixturesImplementation 'org.sonarsource.sonarqube:sonar-db-commons-testfixtures'
 
   testRuntimeOnly 'com.h2database:h2'
   testRuntimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
