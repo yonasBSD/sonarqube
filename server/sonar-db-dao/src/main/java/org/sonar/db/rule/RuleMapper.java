@@ -32,6 +32,8 @@ public interface RuleMapper {
 
   List<RuleDto> selectAll();
 
+  List<RuleDto> selectAllWithoutDescriptions();
+
   List<RuleDto> selectEnabled();
 
   RuleDto selectByUuid(@Param("uuid") String uuid);
@@ -100,4 +102,6 @@ public interface RuleMapper {
   List<String> selectRules(@Param("query") RuleListQuery query, @Param("pagination") Pagination pagination);
 
   Long countByQuery(@Param("query") RuleListQuery query);
+
+  List<RuleDefaultDescriptionContentDto> selectDefaultDescriptionContentsByRuleUuids(@Param("ruleUuids") Collection<String> ruleUuids);
 }

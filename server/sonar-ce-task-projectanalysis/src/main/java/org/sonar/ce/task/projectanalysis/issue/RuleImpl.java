@@ -159,6 +159,11 @@ public class RuleImpl implements Rule {
   }
 
   @Override
+  public boolean hasUuid() {
+    return uuid != null;
+  }
+
+  @Override
   public boolean equals(@Nullable Object o) {
     if (this == o) {
       return true;

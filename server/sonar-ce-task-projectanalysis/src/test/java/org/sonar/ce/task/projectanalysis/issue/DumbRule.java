@@ -131,6 +131,11 @@ public class DumbRule implements Rule {
   }
 
   @Override
+  public boolean hasUuid() {
+    return uuid != null;
+  }
+
+  @Override
   public boolean isExternal() {
     return isExternal;
   }

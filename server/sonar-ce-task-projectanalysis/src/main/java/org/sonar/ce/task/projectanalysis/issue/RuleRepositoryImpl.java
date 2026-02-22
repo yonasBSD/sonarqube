@@ -137,7 +137,7 @@ public class RuleRepositoryImpl implements RuleRepository {
     this.rulesByUuid = new HashMap<>();
     Multimap<String, DeprecatedRuleKeyDto> deprecatedRuleKeysByRuleUuid = dbClient.ruleDao().selectAllDeprecatedRuleKeys(dbSession).stream()
       .collect(MoreCollectors.index(DeprecatedRuleKeyDto::getRuleUuid));
-    for (RuleDto ruleDto : dbClient.ruleDao().selectAll(dbSession)) {
+    for (RuleDto ruleDto : dbClient.ruleDao().selectAllWithoutDescriptions(dbSession)) {
       Rule rule = new RuleImpl(ruleDto);
       rulesByKey.put(ruleDto.getKey(), rule);
       rulesByUuid.put(ruleDto.getUuid(), rule);
@@ -239,6 +239,11 @@ public class RuleRepositoryImpl implements RuleRepository {
     @Override
     public CleanCodeAttribute cleanCodeAttribute() {
       return addHocRule.getCleanCodeAttribute();
+    }
+
+    @Override
+    public boolean hasUuid() {
+      return false;
     }
   }
 }

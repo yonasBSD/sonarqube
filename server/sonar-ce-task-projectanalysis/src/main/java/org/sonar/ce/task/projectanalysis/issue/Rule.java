@@ -73,4 +73,6 @@ public interface Rule {
 
   @CheckForNull
   CleanCodeAttribute cleanCodeAttribute();
+
+  boolean hasUuid();
 }

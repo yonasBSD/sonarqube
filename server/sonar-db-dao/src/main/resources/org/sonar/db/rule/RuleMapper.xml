@@ -57,24 +57,39 @@
   </sql>
 
   <sql id="selectJoinedTablesColumns">
-    <!-- rule default impacts -->
+    <include refid="ruleDefaultImpactsColumns"/>,
+    <include refid="ruleTagsColumns"/>,
+    <include refid="ruleDescriptionSectionsColumns"/>,
+    r.uuid as "r_uuid",
+    <include refid="ruleColumns"/>
+  </sql>
+
+  <sql id="selectJoinedTablesWithoutDescriptionsColumns">
+    <include refid="ruleDefaultImpactsColumns"/>,
+    <include refid="ruleTagsColumns"/>,
+    r.uuid as "r_uuid",
+    <include refid="ruleColumns"/>
+  </sql>
+
+  <sql id="ruleDefaultImpactsColumns">
     rdi.rule_uuid as "rdi_ruleUuid",
     rdi.software_quality as "rdi_softwareQuality",
-    rdi.severity as "rdi_severity",
-    <!-- rule tags -->
+    rdi.severity as "rdi_severity"
+  </sql>
+
+  <sql id="ruleTagsColumns">
     CASE WHEN rt.is_system_tag = ${_true} THEN rt.value ELSE NULL END as rt_systemTags,
     CASE WHEN rt.is_system_tag = ${_false} THEN rt.value ELSE NULL END as rt_tags,
     rt.is_system_tag as "rt_isSystemTag",
-    rt.value as "rt_value",
-    <!-- rule description sections -->
+    rt.value as "rt_value"
+  </sql>
+
+  <sql id="ruleDescriptionSectionsColumns">
     rds.content as "rds_content",
     rds.uuid as "rds_uuid",
     rds.kee as "rds_kee",
     rds.context_key as "rds_contextKey",
-    rds.context_display_name as "rds_contextDisplayName",
-    <!-- rule -->
-    r.uuid as "r_uuid",
-    <include refid="ruleColumns"/>
+    rds.context_display_name as "rds_contextDisplayName"
   </sql>
 
   <select id="selectAll" resultMap="ruleResultMap">
@@ -83,6 +98,16 @@
     from
       rules r
     <include refid="leftOuterJoinRulesDescriptionSections"/>
+    <include refid="leftOuterJoinRulesDefaultImpacts"/>
+    <include refid="leftOuterJoinRulesTags"/>
+    order by r.uuid
+  </select>
+
+  <select id="selectAllWithoutDescriptions" resultMap="ruleResultMap">
+    select
+      <include refid="selectJoinedTablesWithoutDescriptionsColumns"/>
+    from
+      rules r
     <include refid="leftOuterJoinRulesDefaultImpacts"/>
     <include refid="leftOuterJoinRulesTags"/>
     order by r.uuid
@@ -694,6 +719,17 @@
       and ar.profile_uuid = #{query.profileUuid,jdbcType=VARCHAR}
     </if>
   </sql>
+
+  <select id="selectDefaultDescriptionContentsByRuleUuids" resultType="org.sonar.db.rule.RuleDefaultDescriptionContentDto">
+    SELECT rds.rule_uuid as "ruleUuid", rds.content as "content"
+    FROM rule_desc_sections rds
+    WHERE rds.kee = 'default'
+      AND rds.context_key IS NULL
+      AND rds.rule_uuid IN
+      <foreach collection="ruleUuids" item="uuid" open="(" separator="," close=")">
+        #{uuid,jdbcType=VARCHAR}
+      </foreach>
+  </select>
 
 </mapper>
 

@@ -24,10 +24,11 @@ import com.google.common.collect.MoreCollectors;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -41,12 +42,11 @@ import org.sonar.api.rule.RuleStatus;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.CleanCodeAttribute;
 import org.sonar.api.rules.RuleQuery;
-import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.debt.DebtRemediationFunction;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.api.utils.System2;
-import org.sonar.core.util.UuidFactoryFast;
 import org.sonar.db.DbSession;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.DbTester;
 import org.sonar.db.Pagination;
 import org.sonar.db.RowNotFoundException;
@@ -375,6 +375,30 @@ class RuleDaoIT {
   }
 
   @Test
+  void selectAllWithoutDescriptions_shouldReturnAllRules() {
+    RuleDto rule1 = db.rules().insert();
+    RuleDto rule2 = db.rules().insert();
+    RuleDto removedRule = db.rules().insert(r -> r.setStatus(REMOVED));
+
+    List<RuleDto> ruleDtos = underTest.selectAllWithoutDescriptions(db.getSession());
+
+    assertThat(ruleDtos)
+      .extracting(RuleDto::getUuid)
+      .containsExactlyInAnyOrder(rule1.getUuid(), rule2.getUuid(), removedRule.getUuid());
+  }
+
+  @Test
+  void selectAllWithoutDescriptions_shouldNotLoadDescriptionSections() {
+    RuleDto insert = db.rules().insert();
+    assertThat(insert.getDefaultRuleDescriptionSection()).isNotNull();
+
+    List<RuleDto> ruleDtos = underTest.selectAllWithoutDescriptions(db.getSession());
+
+    assertThat(ruleDtos).hasSize(1);
+    assertThat(ruleDtos.getFirst().getRuleDescriptionSectionDtos()).isEmpty();
+  }
+
+  @Test
   void selectEnabled_with_ResultHandler() {
     RuleDto rule = db.rules().insert();
     db.rules().insert(r -> r.setStatus(REMOVED));
@@ -574,7 +598,7 @@ class RuleDaoIT {
   @NotNull
   private static RuleDescriptionSectionDto createDescriptionSectionWithContext(String key, String contextKey, String contextDisplayName) {
     return RuleDescriptionSectionDto.builder()
-      .uuid(UuidFactoryFast.getInstance().create())
+      .uuid(UUID.randomUUID().toString())
       .content("content")
       .key(key)
       .context(RuleDescriptionSectionContextDto.of(contextKey, contextDisplayName))
@@ -1058,7 +1082,6 @@ class RuleDaoIT {
     assertThat(Arrays.asList(firstRule, secondRule))
       .extracting(RuleForIndexingDto::getUuid, RuleForIndexingDto::getRuleKey)
       .containsExactlyInAnyOrder(tuple(r1.getUuid(), r1.getKey()), tuple(r2.getUuid(), r2.getKey()));
-    Iterator<RuleForIndexingDto> it = accumulator.list.iterator();
 
     assertThat(firstRule.getRepository()).isEqualTo(r1.getRepositoryKey());
     assertThat(firstRule.getPluginRuleKey()).isEqualTo(r1.getRuleKey());
@@ -1410,6 +1433,60 @@ class RuleDaoIT {
     assertThat(ruleListResult.getTotal()).isEqualTo(2);
   }
 
+  @Test
+  void selectDefaultDescriptionContentsByRuleUuids_whenRulesHaveDefaultSections_shouldReturnContents() {
+    RuleDto rule1 = db.rules().insert();
+    RuleDto rule2 = db.rules().insert();
+    String expectedContent1 = defaultSectionContent(rule1);
+    String expectedContent2 = defaultSectionContent(rule2);
+
+    Map<String, String> result = underTest.selectDefaultDescriptionContentsByRuleUuids(db.getSession(), List.of(rule1.getUuid(), rule2.getUuid()));
+
+    assertThat(result)
+      .containsEntry(rule1.getUuid(), expectedContent1)
+      .containsEntry(rule2.getUuid(), expectedContent2);
+  }
+
+  @Test
+  void selectDefaultDescriptionContentsByRuleUuids_whenRuleHasNoDefaultSection_shouldNotBeIncluded() {
+    RuleDescriptionSectionDto nonDefaultSection = RuleDescriptionSectionDto.builder()
+      .uuid(UUID.randomUUID().toString())
+      .key("how_to_fix")
+      .content("fix content")
+      .build();
+    RuleDto ruleWithoutDefault = db.rules().insert(r -> r.replaceRuleDescriptionSectionDtos(List.of(nonDefaultSection)));
+    RuleDto ruleWithDefault = db.rules().insert();
+
+    Map<String, String> result = underTest.selectDefaultDescriptionContentsByRuleUuids(db.getSession(),
+      List.of(ruleWithoutDefault.getUuid(), ruleWithDefault.getUuid()));
+
+    assertThat(result)
+      .doesNotContainKey(ruleWithoutDefault.getUuid())
+      .containsEntry(ruleWithDefault.getUuid(), defaultSectionContent(ruleWithDefault));
+  }
+
+  @Test
+  void selectDefaultDescriptionContentsByRuleUuids_whenEmptyInput_shouldReturnEmptyMap() {
+    Map<String, String> result = underTest.selectDefaultDescriptionContentsByRuleUuids(db.getSession(), List.of());
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void selectDefaultDescriptionContentsByRuleUuids_whenUnknownUuids_shouldReturnEmptyMap() {
+    Map<String, String> result = underTest.selectDefaultDescriptionContentsByRuleUuids(db.getSession(), List.of(UNKNOWN_RULE_UUID));
+
+    assertThat(result).isEmpty();
+  }
+
+  private static String defaultSectionContent(RuleDto rule) {
+    return rule.getRuleDescriptionSectionDtos().stream()
+      .filter(RuleDescriptionSectionDto::isDefault)
+      .map(RuleDescriptionSectionDto::getContent)
+      .findFirst()
+      .orElseThrow();
+  }
+
   private static ImpactDto newRuleDefaultImpact(SoftwareQuality softwareQuality, org.sonar.api.issue.impact.Severity severity) {
     return new ImpactDto()
       .setSoftwareQuality(softwareQuality)
@@ -1417,7 +1494,7 @@ class RuleDaoIT {
   }
 
   private static RuleDescriptionSectionDto createDefaultRuleDescriptionSection() {
-    return RuleDescriptionSectionDto.createDefaultRuleDescriptionSection(UuidFactoryFast.getInstance().create(),
+    return RuleDescriptionSectionDto.createDefaultRuleDescriptionSection(UUID.randomUUID().toString(),
       RandomStringUtils.secure().nextAlphanumeric(1000));
   }
 

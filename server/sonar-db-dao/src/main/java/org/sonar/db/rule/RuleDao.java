@@ -99,6 +99,14 @@ public class RuleDao implements Dao {
     return mapper(session).selectAll();
   }
 
+  /**
+   * Like {@link #selectAll(DbSession)} but skips loading description sections (CLOB content).
+   * Use this when descriptions are not needed upfront and can be fetched on demand.
+   */
+  public List<RuleDto> selectAllWithoutDescriptions(DbSession session) {
+    return mapper(session).selectAllWithoutDescriptions();
+  }
+
   public List<RuleDto> selectByTypeAndLanguages(DbSession session, List<Integer> types, List<String> languages) {
     return executeLargeInputs(languages, chunk -> mapper(session).selectByTypeAndLanguages(types, chunk));
   }
@@ -308,6 +316,15 @@ public class RuleDao implements Dao {
     return new RuleListResult(
       mapper(dbSession).selectRules(ruleListQuery, pagination),
       mapper(dbSession).countByQuery(ruleListQuery));
+  }
+
+  public Map<String, String> selectDefaultDescriptionContentsByRuleUuids(DbSession dbSession, Collection<String> ruleUuids) {
+    if (ruleUuids.isEmpty()) {
+      return Collections.emptyMap();
+    }
+    return executeLargeInputs(ruleUuids, chunk -> mapper(dbSession).selectDefaultDescriptionContentsByRuleUuids(chunk))
+      .stream()
+      .collect(toMap(RuleDefaultDescriptionContentDto::ruleUuid, RuleDefaultDescriptionContentDto::content));
   }
 
 }

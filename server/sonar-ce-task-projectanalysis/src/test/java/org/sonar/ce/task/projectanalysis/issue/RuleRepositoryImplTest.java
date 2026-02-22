@@ -19,11 +19,11 @@
  */
 package org.sonar.ce.task.projectanalysis.issue;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.tngtech.java.junit.dataprovider.DataProvider;
 import com.tngtech.java.junit.dataprovider.DataProviderRunner;
 import com.tngtech.java.junit.dataprovider.UseDataProvider;
+import java.util.List;
 import java.util.Optional;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.Before;
@@ -31,8 +31,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
-import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.System2;
+import org.sonar.core.rule.RuleType;
 import org.sonar.core.util.SequenceUuidFactory;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -80,7 +80,7 @@ public class RuleRepositoryImplTest {
   public void setUp() {
     when(dbClient.openSession(anyBoolean())).thenReturn(dbSession);
     when(dbClient.ruleDao()).thenReturn(ruleDao);
-    when(ruleDao.selectAll(any(DbSession.class))).thenReturn(ImmutableList.of(AB_RULE));
+    when(ruleDao.selectAllWithoutDescriptions(any(DbSession.class))).thenReturn(List.of(AB_RULE));
     DeprecatedRuleKeyDto abDeprecatedRuleKey1 = deprecatedRuleKeyOf(AB_RULE, AB_RULE_DEPRECATED_KEY_1);
     DeprecatedRuleKeyDto abDeprecatedRuleKey2 = deprecatedRuleKeyOf(AB_RULE, AB_RULE_DEPRECATED_KEY_2);
     DeprecatedRuleKeyDto deprecatedRuleOfNonExistingRule = deprecatedRuleKeyOf("unknown-rule-uuid", DEPRECATED_KEY_OF_NON_EXITING_RULE);
@@ -107,7 +107,7 @@ public class RuleRepositoryImplTest {
   public void first_call_to_getByKey_triggers_call_to_db_and_any_subsequent_get_or_find_call_does_not() {
     underTest.getByKey(AB_RULE.getKey());
 
-    verify(ruleDao, times(1)).selectAll(any(DbSession.class));
+    verify(ruleDao, times(1)).selectAllWithoutDescriptions(any(DbSession.class));
 
     verifyNoMethodCallTriggersCallToDB();
   }
@@ -116,7 +116,7 @@ public class RuleRepositoryImplTest {
   public void first_call_to_findByKey_triggers_call_to_db_and_any_subsequent_get_or_find_call_does_not() {
     underTest.findByKey(AB_RULE.getKey());
 
-    verify(ruleDao, times(1)).selectAll(any(DbSession.class));
+    verify(ruleDao, times(1)).selectAllWithoutDescriptions(any(DbSession.class));
 
     verifyNoMethodCallTriggersCallToDB();
   }
@@ -125,7 +125,7 @@ public class RuleRepositoryImplTest {
   public void first_call_to_getById_triggers_call_to_db_and_any_subsequent_get_or_find_call_does_not() {
     underTest.getByUuid(AB_RULE.getUuid());
 
-    verify(ruleDao, times(1)).selectAll(any(DbSession.class));
+    verify(ruleDao, times(1)).selectAllWithoutDescriptions(any(DbSession.class));
 
     verifyNoMethodCallTriggersCallToDB();
   }
@@ -134,7 +134,7 @@ public class RuleRepositoryImplTest {
   public void first_call_to_findById_triggers_call_to_db_and_any_subsequent_get_or_find_call_does_not() {
     underTest.findByUuid(AB_RULE.getUuid());
 
-    verify(ruleDao, times(1)).selectAll(any(DbSession.class));
+    verify(ruleDao, times(1)).selectAllWithoutDescriptions(any(DbSession.class));
 
     verifyNoMethodCallTriggersCallToDB();
   }
