@@ -8,7 +8,7 @@ dependencies {
   api 'com.google.code.gson:gson'
   api 'com.google.guava:guava'
   api 'commons-io:commons-io'
-  api 'org.apache.velocity:velocity'
+  api 'org.apache.velocity:velocity-engine-core'
   api 'org.slf4j:log4j-over-slf4j'
   api 'org.sonarsource.orchestrator:sonar-orchestrator-junit4'
 

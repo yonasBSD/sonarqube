@@ -566,9 +566,7 @@ subprojects {
       dependency 'org.wiremock:wiremock-standalone:3.13.2'
       dependency 'org.skyscreamer:jsonassert:1.5.3'
       // to be used only in sonar-ws-generator
-      dependency("org.apache.velocity:velocity:1.7") {
-        dependency 'commons-collections:commons-collections:3.2.2'
-      }
+      dependency 'org.apache.velocity:velocity-engine-core:2.4.1'
       dependency 'com.google.code.findbugs:jsr305:3.0.2'
       // please keep this list alphabetically ordered
     }
