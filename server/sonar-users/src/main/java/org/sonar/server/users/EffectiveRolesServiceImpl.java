@@ -19,11 +19,10 @@
  */
 package org.sonar.server.users;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.sonar.api.server.ServerSide;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -32,10 +31,14 @@ import org.sonarsource.users.api.EffectiveRolesBatchQuery;
 import org.sonarsource.users.api.EffectiveRolesQuery;
 import org.sonarsource.users.api.EffectiveRolesService;
 import org.sonarsource.users.api.model.EffectiveRole;
+import org.sonarsource.users.api.model.EffectiveRoleBatch;
+import org.sonarsource.users.api.model.Principal;
 import org.sonarsource.users.api.model.PrincipalType;
+import org.sonarsource.users.api.model.ResourceType;
 
 @ServerSide
 public class EffectiveRolesServiceImpl implements EffectiveRolesService {
+  public static final String ADMIN_ROLE = "admin";
   private final DbClient dbClient;
 
   public EffectiveRolesServiceImpl(DbClient dbClient) {
@@ -43,7 +46,7 @@ public class EffectiveRolesServiceImpl implements EffectiveRolesService {
   }
 
   @Override
-  public Set<String> getEffectiveRoles(EffectiveRolesQuery query) {
+  public List<EffectiveRole> getEffectiveRoles(EffectiveRolesQuery query) {
     EffectiveRolesBatchQuery batchQuery = new EffectiveRolesBatchQuery(
       List.of(query.principal().id()),
       query.principal().type(),
@@ -53,12 +56,12 @@ public class EffectiveRolesServiceImpl implements EffectiveRolesService {
     );
 
     return getEffectiveRolesBatch(batchQuery).stream()
-      .map(EffectiveRole::role)
-      .collect(Collectors.toSet());
+      .flatMap(batch -> batch.effectiveRoles().stream())
+      .toList();
   }
 
   @Override
-  public Set<EffectiveRole> getEffectiveRolesBatch(EffectiveRolesBatchQuery query) {
+  public List<EffectiveRoleBatch> getEffectiveRolesBatch(EffectiveRolesBatchQuery query) {
     validatePrincipalType(query.principalType());
 
     try (DbSession dbSession = dbClient.openSession(false)) {
@@ -71,41 +74,68 @@ public class EffectiveRolesServiceImpl implements EffectiveRolesService {
     }
   }
 
-  private Set<EffectiveRole> getOrganizationRolesBatch(DbSession dbSession, EffectiveRolesBatchQuery query) {
+  @Override
+  public boolean isOrganizationAdmin(String userId, String organizationId) {
+    return hasOrganizationRole(userId, organizationId, ADMIN_ROLE);
+  }
+
+  @Override
+  public boolean isProjectAdmin(String userId, String projectId) {
+    return hasProjectRole(userId, projectId, ADMIN_ROLE);
+  }
+
+  @Override
+  public boolean hasOrganizationRole(String userId, String organizationId, String role) {
+    return getEffectiveRoles(new EffectiveRolesQuery(
+      new Principal(PrincipalType.USER, userId), organizationId, ResourceType.ORGANIZATION
+    )).contains(new EffectiveRole(role));
+  }
+
+  @Override
+  public boolean hasProjectRole(String userId, String projectId, String role) {
+    return getEffectiveRoles(new EffectiveRolesQuery(
+      new Principal(PrincipalType.USER, userId), projectId, ResourceType.PROJECT
+    )).contains(new EffectiveRole(role));
+  }
+
+  private List<EffectiveRoleBatch> getOrganizationRolesBatch(DbSession dbSession, EffectiveRolesBatchQuery query) {
     Map<String, Set<String>> rolesPerPrincipal =
       dbClient.authorizationDao().selectGlobalPermissionsBatch(dbSession, query.principalIds());
 
-    return transformToEffectiveRoles(rolesPerPrincipal, DefaultOrganizationProvider.ID.toString(), query);
+    return transformToEffectiveRoleBatches(rolesPerPrincipal, DefaultOrganizationProvider.ID.toString(), query);
   }
 
-  private Set<EffectiveRole> getProjectRolesBatch(DbSession dbSession, EffectiveRolesBatchQuery query) {
+  private List<EffectiveRoleBatch> getProjectRolesBatch(DbSession dbSession, EffectiveRolesBatchQuery query) {
     List<String> resourceIds = query.resourceIds();
     if (resourceIds == null || resourceIds.isEmpty()) {
       throw new IllegalArgumentException("Resource IDs are required for PROJECT resource type");
     }
 
-    Set<EffectiveRole> result = new HashSet<>();
+    List<EffectiveRoleBatch> result = new ArrayList<>();
     for (String resourceId : resourceIds) {
       Map<String, Set<String>> rolesPerPrincipal =
         dbClient.authorizationDao().selectEntityPermissionsBatch(dbSession, resourceId, query.principalIds());
 
-      result.addAll(transformToEffectiveRoles(rolesPerPrincipal, resourceId, query));
+      result.addAll(transformToEffectiveRoleBatches(rolesPerPrincipal, resourceId, query));
     }
     return result;
   }
 
-  private static Set<EffectiveRole> transformToEffectiveRoles(
+  private static List<EffectiveRoleBatch> transformToEffectiveRoleBatches(
     Map<String, Set<String>> rolesPerPrincipal,
     String resourceId,
     EffectiveRolesBatchQuery query) {
 
-    Set<EffectiveRole> result = new HashSet<>();
-    rolesPerPrincipal.forEach((principalId, roles) ->
-      roles.stream()
+    List<EffectiveRoleBatch> result = new ArrayList<>();
+    rolesPerPrincipal.forEach((principalId, roles) -> {
+      List<EffectiveRole> effectiveRoles = roles.stream()
         .filter(role -> query.role() == null || query.role().equals(role))
-        .forEach(role -> result.add(
-          new EffectiveRole(principalId, query.principalType(), resourceId, query.resourceType(), role)))
-    );
+        .map(EffectiveRole::new)
+        .toList();
+      if (!effectiveRoles.isEmpty()) {
+        result.add(new EffectiveRoleBatch(principalId, query.principalType(), resourceId, query.resourceType(), effectiveRoles));
+      }
+    });
     return result;
   }
 

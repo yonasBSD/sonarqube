@@ -20,6 +20,7 @@
 package org.sonar.server.users;
 
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -32,6 +33,7 @@ import org.sonarsource.users.api.model.User;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 class UsersServiceImplTest {
 
@@ -57,12 +59,13 @@ class UsersServiceImplTest {
 
     List<User> users = underTest.findUsers(query);
 
-    assertThat(users).hasSize(2);
-    assertThat(users).extracting(User::login).containsExactlyInAnyOrder(user1.getLogin(), user2.getLogin());
-    assertThat(users).extracting(User::id).containsExactlyInAnyOrder(
-      user1.getUuid(),
-      user2.getUuid()
-    );
+    assertThat(users)
+      .hasSize(2)
+      .extracting(User::login, User::id)
+      .containsExactlyInAnyOrder(
+        tuple(user1.getLogin(), user1.getUuid()),
+        tuple(user2.getLogin(), user2.getUuid())
+      );
   }
 
   @Test
@@ -77,8 +80,10 @@ class UsersServiceImplTest {
 
     List<User> users = underTest.findUsers(query);
 
-    assertThat(users).hasSize(2);
-    assertThat(users).extracting(User::login).containsExactlyInAnyOrder(user1.getLogin(), user2.getLogin());
+    assertThat(users)
+      .hasSize(2)
+      .extracting(User::login)
+      .containsExactlyInAnyOrder(user1.getLogin(), user2.getLogin());
   }
 
   @Test
@@ -99,17 +104,18 @@ class UsersServiceImplTest {
     List<User> users = underTest.findUsers(query);
 
     assertThat(users).hasSize(1);
-    User user = users.getFirst();
-    assertThat(user.id()).isEqualTo(userDto.getUuid());
-    assertThat(user.login()).isEqualTo("testuser");
-    assertThat(user.name()).isEqualTo("Test User");
-    assertThat(user.email()).isEqualTo("test@example.com");
-    assertThat(user.externalProvider()).isEqualTo("github");
-    assertThat(user.externalLogin()).isEqualTo("test-github");
-    assertThat(user.active()).isTrue();
-    assertThat(user.isSsoUser()).isFalse();
-    assertThat(user.avatar()).isNotNull();
-    assertThat(user.createdAt()).isNotNull();
+    assertThat(users.getFirst()).satisfies(user -> {
+      assertThat(user.id()).isEqualTo(userDto.getUuid());
+      assertThat(user.login()).isEqualTo("testuser");
+      assertThat(user.name()).isEqualTo("Test User");
+      assertThat(user.email()).isEqualTo("test@example.com");
+      assertThat(user.externalProvider()).isEqualTo("github");
+      assertThat(user.externalLogin()).isEqualTo("test-github");
+      assertThat(user.active()).isTrue();
+      assertThat(user.isSsoUser()).isFalse();
+      assertThat(user.avatar()).isNotNull();
+      assertThat(user.createdAt()).isNotNull();
+    });
   }
 
   @Test
@@ -122,8 +128,11 @@ class UsersServiceImplTest {
 
     List<User> users = underTest.findUsers(query);
 
-    assertThat(users).hasSize(1);
-    assertThat(users.getFirst().avatar()).isNotNull();
+    assertThat(users)
+      .hasSize(1)
+      .singleElement()
+      .extracting(User::avatar)
+      .isNotNull();
   }
 
   @Test
@@ -168,7 +177,80 @@ class UsersServiceImplTest {
 
     List<User> users = underTest.findUsers(query);
 
-    assertThat(users).hasSize(1);
-    assertThat(users.getFirst().local()).isTrue();
+    assertThat(users)
+      .hasSize(1)
+      .singleElement()
+      .extracting(User::local)
+      .isEqualTo(true);
+  }
+
+  @Test
+  void getUserByLogin_whenUserExists_shouldReturnUser() {
+    UserDto userDto = db.users().insertUser();
+
+    Optional<User> user = underTest.getUserByLogin(userDto.getLogin());
+
+    assertThat(user)
+      .isPresent()
+      .hasValueSatisfying(u -> {
+        assertThat(u.login()).isEqualTo(userDto.getLogin());
+        assertThat(u.id()).isEqualTo(userDto.getUuid());
+      });
+  }
+
+  @Test
+  void getUserByLogin_whenUserDoesNotExist_shouldReturnEmpty() {
+    Optional<User> user = underTest.getUserByLogin("nonexistent");
+
+    assertThat(user).isEmpty();
+  }
+
+  @Test
+  void getUsersByLogins_shouldReturnMatchingUsers() {
+    UserDto user1 = db.users().insertUser();
+    UserDto user2 = db.users().insertUser();
+    db.users().insertUser(); // not queried
+
+    List<User> users = underTest.getUsersByLogins(List.of(user1.getLogin(), user2.getLogin()));
+
+    assertThat(users)
+      .hasSize(2)
+      .extracting(User::login)
+      .containsExactlyInAnyOrder(user1.getLogin(), user2.getLogin());
+  }
+
+  @Test
+  void getUserById_whenUserExists_shouldReturnUser() {
+    UserDto userDto = db.users().insertUser();
+
+    Optional<User> user = underTest.getUserById(userDto.getUuid());
+
+    assertThat(user)
+      .isPresent()
+      .hasValueSatisfying(u -> {
+        assertThat(u.id()).isEqualTo(userDto.getUuid());
+        assertThat(u.login()).isEqualTo(userDto.getLogin());
+      });
+  }
+
+  @Test
+  void getUserById_whenUserDoesNotExist_shouldReturnEmpty() {
+    Optional<User> user = underTest.getUserById("nonexistent-id");
+
+    assertThat(user).isEmpty();
+  }
+
+  @Test
+  void getUsersByIds_shouldReturnMatchingUsers() {
+    UserDto user1 = db.users().insertUser();
+    UserDto user2 = db.users().insertUser();
+    db.users().insertUser(); // not queried
+
+    List<User> users = underTest.getUsersByIds(List.of(user1.getUuid(), user2.getUuid()));
+
+    assertThat(users)
+      .hasSize(2)
+      .extracting(User::id)
+      .containsExactlyInAnyOrder(user1.getUuid(), user2.getUuid());
   }
 }

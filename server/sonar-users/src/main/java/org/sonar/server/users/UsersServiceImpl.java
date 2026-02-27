@@ -20,6 +20,7 @@
 package org.sonar.server.users;
 
 import java.util.List;
+import java.util.Optional;
 import org.sonar.api.server.ServerSide;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -53,6 +54,40 @@ public class UsersServiceImpl implements UsersService {
       }
 
       return userDtos.stream()
+        .map(dto -> UserDtoConverter.toApiUser(dto, avatarResolver))
+        .toList();
+    }
+  }
+
+  @Override
+  public Optional<User> getUserByLogin(String login) {
+    try (DbSession dbSession = dbClient.openSession(false)) {
+      return Optional.ofNullable(dbClient.userDao().selectByLogin(dbSession, login))
+        .map(dto -> UserDtoConverter.toApiUser(dto, avatarResolver));
+    }
+  }
+
+  @Override
+  public List<User> getUsersByLogins(List<String> logins) {
+    try (DbSession dbSession = dbClient.openSession(false)) {
+      return dbClient.userDao().selectByLogins(dbSession, logins).stream()
+        .map(dto -> UserDtoConverter.toApiUser(dto, avatarResolver))
+        .toList();
+    }
+  }
+
+  @Override
+  public Optional<User> getUserById(String id) {
+    try (DbSession dbSession = dbClient.openSession(false)) {
+      return Optional.ofNullable(dbClient.userDao().selectByUuid(dbSession, id))
+        .map(dto -> UserDtoConverter.toApiUser(dto, avatarResolver));
+    }
+  }
+
+  @Override
+  public List<User> getUsersByIds(List<String> ids) {
+    try (DbSession dbSession = dbClient.openSession(false)) {
+      return dbClient.userDao().selectByUuids(dbSession, ids).stream()
         .map(dto -> UserDtoConverter.toApiUser(dto, avatarResolver))
         .toList();
     }

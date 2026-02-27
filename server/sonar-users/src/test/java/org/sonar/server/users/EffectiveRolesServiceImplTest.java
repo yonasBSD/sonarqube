@@ -20,7 +20,6 @@
 package org.sonar.server.users;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +37,7 @@ import org.sonarsource.organizations.server.DefaultOrganizationProvider;
 import org.sonarsource.users.api.EffectiveRolesBatchQuery;
 import org.sonarsource.users.api.EffectiveRolesQuery;
 import org.sonarsource.users.api.model.EffectiveRole;
+import org.sonarsource.users.api.model.EffectiveRoleBatch;
 import org.sonarsource.users.api.model.Principal;
 import org.sonarsource.users.api.model.PrincipalType;
 import org.sonarsource.users.api.model.ResourceType;
@@ -69,9 +69,9 @@ class EffectiveRolesServiceImplTest {
       ResourceType.ORGANIZATION
     );
 
-    Set<String> roles = underTest.getEffectiveRoles(query);
+    List<EffectiveRole> roles = underTest.getEffectiveRoles(query);
 
-    assertThat(roles).containsExactlyInAnyOrder("admin", "provisioning");
+    assertThat(roles).containsExactlyInAnyOrder(new EffectiveRole("admin"), new EffectiveRole("provisioning"));
   }
 
   @Test
@@ -87,9 +87,9 @@ class EffectiveRolesServiceImplTest {
       ResourceType.PROJECT
     );
 
-    Set<String> roles = underTest.getEffectiveRoles(query);
+    List<EffectiveRole> roles = underTest.getEffectiveRoles(query);
 
-    assertThat(roles).containsExactlyInAnyOrder("user", "codeviewer");
+    assertThat(roles).containsExactlyInAnyOrder(new EffectiveRole("user"), new EffectiveRole("codeviewer"));
   }
 
   @ParameterizedTest
@@ -141,14 +141,12 @@ class EffectiveRolesServiceImplTest {
       null
     );
 
-    Set<EffectiveRole> roles = underTest.getEffectiveRolesBatch(query);
+    List<EffectiveRoleBatch> batches = underTest.getEffectiveRolesBatch(query);
 
-    assertThat(roles)
-      .hasSize(2)
-      .contains(
-        new EffectiveRole(user1.getUuid(), PrincipalType.USER, DefaultOrganizationProvider.ID.toString(), ResourceType.ORGANIZATION, "admin"),
-        new EffectiveRole(user2.getUuid(), PrincipalType.USER, DefaultOrganizationProvider.ID.toString(), ResourceType.ORGANIZATION, "provisioning")
-      );
+    assertThat(batches).containsExactlyInAnyOrder(
+      new EffectiveRoleBatch(user1.getUuid(), PrincipalType.USER, DefaultOrganizationProvider.ID.toString(), ResourceType.ORGANIZATION, List.of(new EffectiveRole("admin"))),
+      new EffectiveRoleBatch(user2.getUuid(), PrincipalType.USER, DefaultOrganizationProvider.ID.toString(), ResourceType.ORGANIZATION, List.of(new EffectiveRole("provisioning")))
+    );
   }
 
   @Test
@@ -165,13 +163,11 @@ class EffectiveRolesServiceImplTest {
       "admin"
     );
 
-    Set<EffectiveRole> roles = underTest.getEffectiveRolesBatch(query);
+    List<EffectiveRoleBatch> batches = underTest.getEffectiveRolesBatch(query);
 
-    assertThat(roles)
-      .hasSize(1)
-      .contains(
-        new EffectiveRole(user.getUuid(), PrincipalType.USER, DefaultOrganizationProvider.ID.toString(), ResourceType.ORGANIZATION, "admin")
-      );
+    assertThat(batches).containsExactly(
+      new EffectiveRoleBatch(user.getUuid(), PrincipalType.USER, DefaultOrganizationProvider.ID.toString(), ResourceType.ORGANIZATION, List.of(new EffectiveRole("admin")))
+    );
   }
 
   @Test
@@ -205,14 +201,12 @@ class EffectiveRolesServiceImplTest {
       null
     );
 
-    Set<EffectiveRole> roles = underTest.getEffectiveRolesBatch(query);
+    List<EffectiveRoleBatch> batches = underTest.getEffectiveRolesBatch(query);
 
-    assertThat(roles)
-      .hasSize(2)
-      .contains(
-        new EffectiveRole(user.getUuid(), PrincipalType.USER, project1.projectUuid(), ResourceType.PROJECT, "user"),
-        new EffectiveRole(user.getUuid(), PrincipalType.USER, project2.projectUuid(), ResourceType.PROJECT, "admin")
-      );
+    assertThat(batches).containsExactlyInAnyOrder(
+      new EffectiveRoleBatch(user.getUuid(), PrincipalType.USER, project1.projectUuid(), ResourceType.PROJECT, List.of(new EffectiveRole("user"))),
+      new EffectiveRoleBatch(user.getUuid(), PrincipalType.USER, project2.projectUuid(), ResourceType.PROJECT, List.of(new EffectiveRole("admin")))
+    );
   }
 
   @Test
@@ -234,11 +228,11 @@ class EffectiveRolesServiceImplTest {
       userUuids, PrincipalType.USER, List.of(), ResourceType.ORGANIZATION, null
     );
 
-    Set<EffectiveRole> roles = underTest.getEffectiveRolesBatch(query);
+    List<EffectiveRoleBatch> batches = underTest.getEffectiveRolesBatch(query);
 
-    assertThat(roles).hasSize(100);
-    assertThat(roles.stream().filter(role -> role.role().equals("admin")).count()).isEqualTo(50);
-    assertThat(roles.stream().filter(role -> role.role().equals("provisioning")).count()).isEqualTo(50);
+    assertThat(batches).hasSize(100);
+    assertThat(batches.stream().flatMap(batch -> batch.effectiveRoles().stream()).filter(role -> role.role().equals("admin")).count()).isEqualTo(50);
+    assertThat(batches.stream().flatMap(batch -> batch.effectiveRoles().stream()).filter(role -> role.role().equals("provisioning")).count()).isEqualTo(50);
   }
 
   @Test
@@ -261,15 +255,81 @@ class EffectiveRolesServiceImplTest {
       null
     );
 
-    Set<EffectiveRole> roles = underTest.getEffectiveRolesBatch(query);
+    List<EffectiveRoleBatch> batches = underTest.getEffectiveRolesBatch(query);
 
-    assertThat(roles)
-      .hasSize(4)
-      .contains(
-        new EffectiveRole(user1.getUuid(), PrincipalType.USER, project1.projectUuid(), ResourceType.PROJECT, "user"),
-        new EffectiveRole(user1.getUuid(), PrincipalType.USER, project2.projectUuid(), ResourceType.PROJECT, "admin"),
-        new EffectiveRole(user2.getUuid(), PrincipalType.USER, project1.projectUuid(), ResourceType.PROJECT, "codeviewer"),
-        new EffectiveRole(user2.getUuid(), PrincipalType.USER, project2.projectUuid(), ResourceType.PROJECT, "issueadmin")
-      );
+    assertThat(batches).containsExactlyInAnyOrder(
+      new EffectiveRoleBatch(user1.getUuid(), PrincipalType.USER, project1.projectUuid(), ResourceType.PROJECT, List.of(new EffectiveRole("user"))),
+      new EffectiveRoleBatch(user1.getUuid(), PrincipalType.USER, project2.projectUuid(), ResourceType.PROJECT, List.of(new EffectiveRole("admin"))),
+      new EffectiveRoleBatch(user2.getUuid(), PrincipalType.USER, project1.projectUuid(), ResourceType.PROJECT, List.of(new EffectiveRole("codeviewer"))),
+      new EffectiveRoleBatch(user2.getUuid(), PrincipalType.USER, project2.projectUuid(), ResourceType.PROJECT, List.of(new EffectiveRole("issueadmin")))
+    );
+  }
+
+  @Test
+  void isOrganizationAdmin_whenUserIsAdmin_shouldReturnTrue() {
+    UserDto user = db.users().insertUser();
+    db.users().insertGlobalPermissionOnUser(user, GlobalPermission.ADMINISTER);
+
+    assertThat(underTest.isOrganizationAdmin(user.getUuid(), DefaultOrganizationProvider.ID.toString())).isTrue();
+  }
+
+  @Test
+  void isOrganizationAdmin_whenUserIsNotAdmin_shouldReturnFalse() {
+    UserDto user = db.users().insertUser();
+    db.users().insertGlobalPermissionOnUser(user, GlobalPermission.PROVISION_PROJECTS);
+
+    assertThat(underTest.isOrganizationAdmin(user.getUuid(), DefaultOrganizationProvider.ID.toString())).isFalse();
+  }
+
+  @Test
+  void isProjectAdmin_whenUserIsAdmin_shouldReturnTrue() {
+    UserDto user = db.users().insertUser();
+    ProjectData project = db.components().insertPrivateProject();
+    db.users().insertProjectPermissionOnUser(user, ProjectPermission.ADMIN, project.getProjectDto());
+
+    assertThat(underTest.isProjectAdmin(user.getUuid(), project.projectUuid())).isTrue();
+  }
+
+  @Test
+  void isProjectAdmin_whenUserIsNotAdmin_shouldReturnFalse() {
+    UserDto user = db.users().insertUser();
+    ProjectData project = db.components().insertPrivateProject();
+    db.users().insertProjectPermissionOnUser(user, ProjectPermission.USER, project.getProjectDto());
+
+    assertThat(underTest.isProjectAdmin(user.getUuid(), project.projectUuid())).isFalse();
+  }
+
+  @Test
+  void hasOrganizationRole_whenUserHasRole_shouldReturnTrue() {
+    UserDto user = db.users().insertUser();
+    db.users().insertGlobalPermissionOnUser(user, GlobalPermission.ADMINISTER);
+
+    assertThat(underTest.hasOrganizationRole(user.getUuid(), DefaultOrganizationProvider.ID.toString(), "admin")).isTrue();
+  }
+
+  @Test
+  void hasOrganizationRole_whenUserDoesNotHaveRole_shouldReturnFalse() {
+    UserDto user = db.users().insertUser();
+    db.users().insertGlobalPermissionOnUser(user, GlobalPermission.PROVISION_PROJECTS);
+
+    assertThat(underTest.hasOrganizationRole(user.getUuid(), DefaultOrganizationProvider.ID.toString(), "admin")).isFalse();
+  }
+
+  @Test
+  void hasProjectRole_whenUserHasRole_shouldReturnTrue() {
+    UserDto user = db.users().insertUser();
+    ProjectData project = db.components().insertPrivateProject();
+    db.users().insertProjectPermissionOnUser(user, ProjectPermission.USER, project.getProjectDto());
+
+    assertThat(underTest.hasProjectRole(user.getUuid(), project.projectUuid(), "user")).isTrue();
+  }
+
+  @Test
+  void hasProjectRole_whenUserDoesNotHaveRole_shouldReturnFalse() {
+    UserDto user = db.users().insertUser();
+    ProjectData project = db.components().insertPrivateProject();
+    db.users().insertProjectPermissionOnUser(user, ProjectPermission.CODEVIEWER, project.getProjectDto());
+
+    assertThat(underTest.hasProjectRole(user.getUuid(), project.projectUuid(), "user")).isFalse();
   }
 }

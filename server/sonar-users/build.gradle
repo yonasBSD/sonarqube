@@ -7,7 +7,7 @@ sonar {
 }
 
 dependencies {
-  api 'org.sonarsource.sonarqube:users-apis:1.0.0.246'
+  api 'org.sonarsource.sonarqube:users-api'
 
   implementation project(':server:sonar-db-dao')
   implementation project(':server:sonar-webserver-common')
